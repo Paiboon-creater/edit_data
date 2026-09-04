@@ -113,6 +113,29 @@
       background: #0f2547; color: var(--theme-secondary); border-bottom: 2px solid var(--border-color);
       padding: 12px 10px; font-weight: bold; text-transform: uppercase; font-size: 12px;
     }
+    
+    /* ==========================================
+       SORTABLE HEADER STYLE (ใหม่)
+    ========================================== */
+    .sortable {
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s;
+    }
+    .sortable:hover {
+      background-color: #172a4d;
+      color: var(--theme-primary);
+    }
+    .sort-icon {
+      margin-left: 5px;
+      font-size: 10px;
+      opacity: 0.5;
+    }
+    .sort-active {
+      opacity: 1;
+      color: var(--theme-accent);
+    }
+
     td {
       padding: 12px 10px; border-bottom: 1px solid #172a4d;
       vertical-align: middle; white-space: nowrap; font-size: 13px;
@@ -128,25 +151,12 @@
     
     .loading-msg { text-align: center; padding: 30px; color: var(--theme-primary); font-size: 16px; letter-spacing: 2px; }
 
-    /* ==========================================
-       EDITABLE CELL STYLE
-    ========================================== */
-    .editable-cell {
-      cursor: cell;
-      position: relative;
-      transition: background 0.2s;
-    }
-    .editable-cell:hover {
-      background-color: rgba(56, 189, 248, 0.15);
-      border-bottom: 1px dashed var(--theme-primary);
-    }
+    /* EDITABLE CELL STYLE */
+    .editable-cell { cursor: cell; position: relative; transition: background 0.2s; }
+    .editable-cell:hover { background-color: rgba(56, 189, 248, 0.15); border-bottom: 1px dashed var(--theme-primary); }
     .edit-input {
-      width: 100%; min-width: 60px;
-      background: #020813;
-      border: 1px solid var(--theme-primary);
-      color: var(--theme-warn);
-      font-family: inherit; font-size: 14px; font-weight: bold;
-      text-align: right; padding: 4px; box-sizing: border-box;
+      width: 100%; min-width: 60px; background: #020813; border: 1px solid var(--theme-primary); color: var(--theme-warn);
+      font-family: inherit; font-size: 14px; font-weight: bold; text-align: right; padding: 4px; box-sizing: border-box;
       outline: none; border-radius: 2px;
     }
     select.edit-input { text-align: center; color: var(--theme-primary); cursor: pointer; }
@@ -165,7 +175,7 @@
       table { border: 1px solid #000; }
       th { background-color: #f0f0f0; color: #000; font-weight: bold; border: 1px solid #000; padding: 6px; font-size: 12px; -webkit-print-color-adjust: exact; }
       td { border: 1px solid #ccc; color: #000 !important; padding: 6px; font-size: 12px; }
-      .val-up, .val-down, .val-mid { color: #000 !important; font-weight: bold; }
+      .sort-icon { display: none; } /* ซ่อนไอคอนจัดเรียงตอนพิมพ์ */
     }
   </style>
 </head>
@@ -187,7 +197,6 @@
     <div id="statusText" style="color: var(--theme-primary); font-size: 12px;">SYSTEM_STATUS: STANDBY</div>
   </div>
 
-  <!-- PRINT ONLY HEADER -->
   <div class="print-header">
     <h1>รายงานตรวจสอบและแก้ไขข้อมูลการผลิต (Modification Report)</h1>
     <p>พิมพ์เมื่อ: <span id="printTimestamp"></span> | บริษัท จากัวร์ อินดัสทรีส์ (ประเทศไทย) จำกัด</p>
@@ -197,7 +206,6 @@
     <span>ชั่วโมงทำงานรวม: <span id="printTotalHrs">0.00</span> ชม.</span>
   </div>
 
-  <!-- SUMMARY BOARD (WEB ONLY) -->
   <div class="summary-board no-print">
     <div class="sum-box">
       <span>TOTAL QTY (ยอดผลิตรวม)</span>
@@ -261,18 +269,19 @@
   <div class="table-responsive">
     <table id="dataTable">
       <thead>
+        <!-- อัปเดตส่วนหัวตาราง เพิ่ม onclick สำหรับเรียกฟังก์ชันเรียงลำดับ (Sort) -->
         <tr>
-          <th>DATE</th>
-          <th>รหัส 5 หลัก</th>
-          <th>ORDER NO</th>
-          <th>WORK CODE</th>
-          <th>STEP</th>
-          <th>PO NUMBER</th>
-          <th>EMPLOYEE</th>
-          <th class="text-right">QTY (PCS) ✏️</th>
-          <th class="text-right">HOURS ✏️</th>
-          <th class="text-center">ช่วงเวลา ✏️</th>
-          <th class="text-right">EFFICIENCY</th>
+          <th class="sortable" onclick="sortTable('date')">DATE <i class="fa-solid fa-sort sort-icon" id="sort-icon-date"></i></th>
+          <th class="sortable" onclick="sortTable('shortcut')">รหัส 5 หลัก <i class="fa-solid fa-sort sort-icon" id="sort-icon-shortcut"></i></th>
+          <th class="sortable" onclick="sortTable('order')">ORDER NO <i class="fa-solid fa-sort sort-icon" id="sort-icon-order"></i></th>
+          <th class="sortable" onclick="sortTable('work')">WORK CODE <i class="fa-solid fa-sort sort-icon" id="sort-icon-work"></i></th>
+          <th class="sortable" onclick="sortTable('step')">STEP <i class="fa-solid fa-sort sort-icon" id="sort-icon-step"></i></th>
+          <th class="sortable" onclick="sortTable('po')">PO NUMBER <i class="fa-solid fa-sort sort-icon" id="sort-icon-po"></i></th>
+          <th class="sortable" onclick="sortTable('emp')">EMPLOYEE <i class="fa-solid fa-sort sort-icon" id="sort-icon-emp"></i></th>
+          <th class="text-right sortable" onclick="sortTable('qty')">QTY (PCS) ✏️ <i class="fa-solid fa-sort sort-icon" id="sort-icon-qty"></i></th>
+          <th class="text-right sortable" onclick="sortTable('hours')">HOURS ✏️ <i class="fa-solid fa-sort sort-icon" id="sort-icon-hours"></i></th>
+          <th class="text-center sortable" onclick="sortTable('period')">ช่วงเวลา ✏️ <i class="fa-solid fa-sort sort-icon" id="sort-icon-period"></i></th>
+          <th class="text-right sortable" onclick="sortTable('eff')">EFFICIENCY <i class="fa-solid fa-sort sort-icon" id="sort-icon-eff"></i></th>
         </tr>
       </thead>
       <tbody id="dataTbody">
@@ -287,7 +296,6 @@
   // ==========================================
   // CONFIGURATION & SETUP
   // ==========================================
-  // ** คำเตือน: รหัส sb_publishable_... ไม่ใช่ Anon Key เปลี่ยนให้เป็นของจริงด้วยนะครับ **
   const SUPABASE_URL = "https://siiiifesdjuunwmwozfb.supabase.co/rest/v1";
   const SUPABASE_KEY = "sb_publishable_ohToE8Z_Fzo87uBtzdPDIg_cqHCi3HT";
   const headers = {
@@ -299,6 +307,9 @@
 
   let db = { orders: [], employees: [], targets: [], workItems: [], steps: [] };
   let currentLogs = []; 
+  
+  // ตัวแปรสำหรับเก็บสถานะการจัดเรียงปัจจุบัน
+  let currentSort = { key: 'date', direction: 'desc' };
 
   window.onload = async function() {
     const today = new Date();
@@ -385,9 +396,6 @@
     });
   }
 
-  // ==========================================
-  // FETCH DATA FROM DATABASE
-  // ==========================================
   async function fetchDataFromDB() {
     const dateFrom = document.getElementById('filter_date_from').value;
     const dateTo = document.getElementById('filter_date_to').value;
@@ -405,10 +413,101 @@
       if (!res.ok) throw new Error("Query Failed");
       
       currentLogs = await res.json();
-      renderTable(); 
+      
+      // เมื่อดึงใหม่ ให้คงการจัดเรียงเดิมไว้ หรือทำการเรียงตาม Default
+      executeSort(); 
 
     } catch (error) {
       tbody.innerHTML = `<tr><td colspan="11" class="loading-msg" style="color:var(--theme-error)">ERR: ${error.message}</td></tr>`;
+    }
+  }
+
+  // ==========================================
+  // TABLE SORTING LOGIC (ใหม่)
+  // ==========================================
+  function sortTable(key) {
+    if (currentSort.key === key) {
+      // ถ้ากดหัวคอลัมน์เดิม ให้สลับทิศทาง
+      currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+      // ถ้ากดหัวคอลัมน์ใหม่ เริ่มจากน้อยไปมาก
+      currentSort.key = key;
+      currentSort.direction = 'asc';
+    }
+    executeSort();
+  }
+
+  function executeSort() {
+    currentLogs.sort((a, b) => {
+      let valA = resolveSortValue(a, currentSort.key);
+      let valB = resolveSortValue(b, currentSort.key);
+
+      // เรียงข้อความแบบไทย-อังกฤษ
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        let comparison = valA.localeCompare(valB, 'th', { numeric: true });
+        return currentSort.direction === 'asc' ? comparison : -comparison;
+      } else {
+        // เรียงตัวเลข
+        if (valA < valB) return currentSort.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return currentSort.direction === 'asc' ? 1 : -1;
+        return 0;
+      }
+    });
+
+    updateSortIcons();
+    renderTable();
+  }
+
+  function resolveSortValue(log, key) {
+    const order = db.orders.find(o => String(o.id_order) === String(log.id_order)) || {};
+    const target = db.targets.find(t => String(t.id_target) === String(log.id_target)) || {};
+    const actualWorkId = log.id_work || order.id_work || target.id_work;
+    const work = db.workItems.find(w => String(w.id_work) === String(actualWorkId)) || {};
+    const step = db.steps.find(s => String(s.id_step) === String(target.id_step)) || {};
+    const emp = db.employees.find(e => String(e.id_name) === String(log.id_name)) || {};
+
+    switch(key) {
+      case 'date': return log.record_date || '';
+      case 'order': return order.order_no || '';
+      case 'work': return work.work_code || '';
+      case 'step': return step.step_name || '';
+      case 'po': return order.po_no || '';
+      case 'emp': return emp.name || '';
+      case 'qty': return log.produced_amount || 0;
+      case 'hours': return log.hour_work || 0;
+      case 'period': return log.work_period || '';
+      case 'eff': 
+         const qty = log.produced_amount || 0;
+         const hrs = log.hour_work || 0;
+         const targetAmt = target.target_amount || 0;
+         return (targetAmt > 0 && hrs > 0) ? (qty / (targetAmt * hrs)) * 100 : 0;
+      case 'shortcut': 
+         let shortcutCode = "";
+         if (order.id_order && order.id_work) {
+           let orderTargets = db.targets.filter(t => String(t.id_work) === String(order.id_work));
+           orderTargets.sort((a,b) => parseInt(a.id_target) - parseInt(b.id_target));
+           let targetIndex = orderTargets.findIndex(t => String(t.id_target) === String(log.id_target));
+           if (targetIndex !== -1) {
+             shortcutCode = String(order.id_order).padStart(3, '0') + String(targetIndex + 1).padStart(2, '0');
+           }
+         }
+         return shortcutCode;
+      default: return '';
+    }
+  }
+
+  function updateSortIcons() {
+    // ล้างไอคอนทั้งหมดกลับเป็นสถานะปกติ (fa-sort)
+    document.querySelectorAll('.sort-icon').forEach(icon => {
+      icon.className = 'fa-solid fa-sort sort-icon';
+    });
+
+    // กำหนดไอคอนให้คอลัมน์ที่ถูกใช้งานอยู่
+    const activeIcon = document.getElementById(`sort-icon-${currentSort.key}`);
+    if (activeIcon) {
+      activeIcon.className = currentSort.direction === 'asc' 
+        ? 'fa-solid fa-sort-up sort-icon sort-active' 
+        : 'fa-solid fa-sort-down sort-icon sort-active';
     }
   }
 
@@ -459,7 +558,7 @@
       const valStepName = step.step_name || '-';
       const valEmpName = emp.name || '-';
       
-      // สร้างรหัสค้นหาขั้นตอน 5 หลัก (เช่น 00101)
+      // สร้างรหัสค้นหาขั้นตอน 5 หลัก
       let shortcutCode = "-";
       if (order.id_order && order.id_work) {
         let orderTargets = db.targets.filter(t => String(t.id_work) === String(order.id_work));
@@ -487,7 +586,6 @@
 
       const effDisplay = effPct > 0 ? `${effPct.toFixed(1)}% ${trendIcon}` : "N/A";
 
-      // สร้างเงื่อนไขอ้างอิงแถวสำหรับ Update DB
       const queryKey = log.id ? `id=eq.${log.id}` : `record_date=eq.${log.record_date}&id_order=eq.${log.id_order}&id_target=eq.${log.id_target}&id_name=eq.${log.id_name}`;
 
       html += `
@@ -542,7 +640,6 @@
   // INLINE EDITING (DOUBLE CLICK TO EDIT)
   // ==========================================
   
-  // 1. ตัวแก้ไขแบบ Text Input (สำหรับตัวเลข)
   function makeInputEditable(tdElement, queryStr, fieldName, oldVal, arrayIndex) {
     if (tdElement.querySelector('input')) return; 
 
@@ -583,14 +680,15 @@
       });
       if (!res.ok) throw new Error("Database update failed");
       currentLogs[arrayIndex][fieldName] = parsedVal;
-      renderTable(); 
+      
+      // ให้เรียงลำดับใหม่ถ้ามีการแก้ค่าในคอลัมน์ที่จัดเรียงอยู่
+      executeSort(); 
     } catch (error) {
       alert("ไม่สามารถบันทึกข้อมูลได้: " + error.message);
       tdElement.innerHTML = fieldName === 'hour_work' ? parseFloat(oldVal).toFixed(2) : parseFloat(oldVal).toLocaleString();
     }
   }
 
-  // 2. ตัวแก้ไขแบบ Dropdown (สำหรับช่วงเวลา ปกติ/OT)
   function makeSelectEditable(tdElement, queryStr, fieldName, oldVal, arrayIndex) {
     if (tdElement.querySelector('select')) return; 
 
@@ -636,7 +734,8 @@
       });
       if (!res.ok) throw new Error("Database update failed");
       currentLogs[arrayIndex][fieldName] = newVal;
-      renderTable(); 
+      
+      executeSort(); 
     } catch (error) {
       alert("ไม่สามารถบันทึกข้อมูลได้: " + error.message);
       tdElement.innerHTML = oldVal;
