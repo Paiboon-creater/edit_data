@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Production Editor</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-grid.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community/styles/ag-theme-alpine.css">
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        h2 {
+            color: #333;
+        }
+        /* กำหนดขนาดของตาราง */
+        #myGrid {
+            height: 600px;
+            width: 100%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <h2>บันทึกข้อมูลการผลิตรายวัน (Daily Production)</h2>
+    <p>ดับเบิลคลิกที่ช่องเพื่อแก้ไขข้อมูล เมื่อคลิกพื้นที่อื่นระบบจะบันทึกอัตโนมัติ</p>
+    
+    <div id="myGrid" class="ag-theme-alpine"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+
+    <script>
+        // --- ส่วนที่ 1: ตั้งค่าการเชื่อมต่อฐานข้อมูล ---
+        // TODO: เปลี่ยน 2 ค่านี้เป็นของโปรเจกต์ Supabase คุณ
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // --- ส่วนที่ 2: ตั้งค่าโครงสร้างตาราง (Columns) ---
+        const columnDefs = [
+            // id ไม่ควรให้แก้ เพราะเป็น Primary Key
+            { field: "id", headerName: "ID", editable: false, width: 80, sortable: true }, 
+            { field: "record_date", headerName: "Date" },
+            { field: "id_name", headerName: "Employee ID" },
+            { field: "id_work", headerName: "Work Item ID" },
+            { field: "produced_amount", headerName: "Produced Amount" },
+            { field: "id_reason", headerName: "Reason ID" },
+            { field: "work_period", headerName: "Work Period" }
+        ];
+
+        // --- ส่วนที่ 3: ตั้งค่าคุณสมบัติรวมของตาราง ---
+        const gridOptions = {
+            columnDefs: columnDefs,
+            defaultColDef: {
+                flex: 1, // ขยายคอลัมน์ให้เต็มจอ
+                editable: true, // เปิดให้แก้ไขได้ (ยกเว้นคอลัมน์ที่ตั้ง editable: false ไว้)
+                filter: true, // ใส่ตัวกรองได้
+                resizable: true // ลากปรับขนาดคอลัมน์ได้
+            },
+            stopEditingWhenCellsLoseFocus: true, // บันทึกค่าทันทีที่คลิกออกนอกช่อง
+            
+            // ฟังก์ชันนี้จะทำงานเมื่อมีการพิมพ์แก้ค่าเสร็จสิ้น
+            onCellValueChanged: async function(event) {
+                const rowId = event.data.id;          // Primary Key ของแถวที่แก้
+                const fieldName = event.colDef.field; // ชื่อคอลัมน์ที่แก้
+                const newValue = event.newValue;      // ค่าใหม่ที่พึ่งพิมพ์ลงไป
+                const oldValue = event.oldValue;      // ค่าเดิมก่อนแก้
+
+                // ถ้าค่าไม่เปลี่ยน ไม่ต้องยิง API
+                if (newValue === oldValue) return; 
+
+                console.log(`อัปเดต [${fieldName}] จาก '${oldValue}' เป็น '${newValue}' (ID: ${rowId})`);
+
+                // ยิงคำสั่ง Update ไปที่ Supabase
+                const { error } = await supabase
+                    .from('daily_production')
+                    .update({ [fieldName]: newValue === "" ? null : newValue }) // ถ้าลบจนว่าง ให้ส่งค่า null
+                    .eq('id', rowId);
+
+                if (error) {
+                    console.error('Update Error:', error);
+                    alert(`บันทึกข้อมูลไม่สำเร็จ: ${error.message}`);
+                }
+            }
+        };
+
+        // --- ส่วนที่ 4: เริ่มต้นการทำงาน (เมื่อหน้าเว็บโหลดเสร็จ) ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            const gridDiv = document.querySelector('#myGrid');
+            
+            // สร้างตารางลงใน HTML
+            const gridApi = agGrid.createGrid(gridDiv, gridOptions);
+
+            // ดึงข้อมูลจากตาราง daily_production ใน Supabase
+            const { data, error } = await supabase
+                .from('daily_production')
+                .select('*')
+                .order('id', { ascending: false }) // เรียงจากล่าสุดขึ้นก่อน
+                .limit(100); // ดึงมาแค่ 100 แถวแรกก่อนกันโหลดช้า (ปรับได้)
+
+            if (error) {
+                console.error('Fetch Error:', error);
+                alert('ไม่สามารถดึงข้อมูลจากฐานข้อมูลได้');
+                return;
+            }
+
+            // นำข้อมูลที่ดึงมา ยัดใส่ลงไปในตาราง
+            gridApi.setGridOption('rowData', data);
+        });
+    </script>
+</body>
+</html>
