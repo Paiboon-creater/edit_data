@@ -796,7 +796,6 @@
   // ==========================================
   // INLINE EDITING
   // ==========================================
-  // ประกาศ Global เพื่อให้ฝังใน HTML Attributes (ondblclick) ได้โดยตรง
   window.makeInputEditable = function(tdElement, queryStr, fieldName, oldVal, arrayIndex) {
     if (tdElement.querySelector('input')) return; 
     const input = document.createElement('input');
