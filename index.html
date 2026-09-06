@@ -33,7 +33,7 @@
       font-size: 14px;
     }
 
-    .container { max-width: 1450px; margin: 0 auto; display: none; /* ซ่อนไว้ก่อนจนกว่าจะ Login */ } 
+    .container { max-width: 1450px; margin: 0 auto; display: none; } 
 
     /* ==========================================
        LOGIN OVERLAY
@@ -185,7 +185,7 @@
       display: none; 
       flex-direction: column;
       overflow: hidden;
-      resize: both; /* อนุญาตให้ย่อขยายได้ */
+      resize: both;
       min-width: 320px;
       min-height: 400px;
     }
@@ -218,7 +218,7 @@
     .manual-body ul { padding-left: 20px; margin-top: 5px; }
     .manual-footer {
       padding: 10px 15px;
-      padding-right: 25px; /* เผื่อพื้นที่ให้ไอคอน resize */
+      padding-right: 25px;
       border-top: 1px solid var(--border-color);
       background-color: var(--bg-dark);
       display: flex;
@@ -247,6 +247,7 @@
 </head>
 <body>
 
+<!-- LOGIN OVERLAY -->
 <div id="loginOverlay">
   <div class="login-box">
     <h2><i class="fa-solid fa-lock"></i> SYSTEM LOGIN</h2>
@@ -260,6 +261,7 @@
 <div class="container" id="mainContainer">
   
   <div style="display: flex; justify-content: flex-end; margin-bottom: 10px; gap: 10px;" class="no-print">
+    <!-- ปุ่มเรียกดูคู่มือ -->
     <button type="button" class="nav-btn" onclick="openManual()">
       <i class="fa-solid fa-book"></i> คู่มือการใช้งาน
     </button>
@@ -370,6 +372,9 @@
 
 </div>
 
+<!-- ==========================================
+     FLOATING MANUAL
+========================================== -->
 <div id="floatingManual" class="floating-manual">
   <div class="manual-header" id="manualHeader">
     <span><i class="fa-solid fa-book-open"></i> คู่มือการใช้งาน Edit Terminal</span>
@@ -421,28 +426,35 @@
   let currentLogs = []; 
   let currentSort = { key: 'date', direction: 'desc' };
 
-  // ผูกอีเวนต์กด Enter ให้กล่อง Login
-  document.getElementById("loginPass").addEventListener("keyup", function(event) {
-    if (event.key === "Enter") checkLogin();
+  // ผูกการทำงานหลังจากที่หน้าเว็บโหลด DOM เสร็จแล้ว
+  document.addEventListener("DOMContentLoaded", function() {
+    // ผูกอีเวนต์กด Enter ให้กล่อง Login
+    document.getElementById("loginPass").addEventListener("keyup", function(event) {
+      if (event.key === "Enter") checkLogin();
+    });
+
+    // โฟกัสช่อง Username อัตโนมัติ
+    document.getElementById('loginUser').focus();
+
+    // เรียกใช้ฟังก์ชันทำให้ลากได้
+    dragElement(document.getElementById("floatingManual"));
   });
 
   window.onload = function() {
-    // เซ็ตวันที่เริ่มต้น
+    // เซ็ตวันที่เริ่มต้นเป็นค่า Default
     const today = new Date();
     document.getElementById('filter_date_from').valueAsDate = today;
     document.getElementById('filter_date_to').valueAsDate = today;
     
     let now = new Date();
     document.getElementById('printTimestamp').innerText = `${now.toLocaleDateString('th-TH')} ${now.toLocaleTimeString('th-TH')}`;
-    
-    // โฟกัสช่อง Username อัตโนมัติ
-    document.getElementById('loginUser').focus();
   };
 
   // ==========================================
   // LOGIN LOGIC
   // ==========================================
-  function checkLogin() {
+  // ประกาศ Global Function เพื่อให้ปุ่ม HTML สามารถเรียกใช้งานได้
+  window.checkLogin = function() {
     const user = document.getElementById('loginUser').value;
     const pass = document.getElementById('loginPass').value;
 
@@ -624,12 +636,13 @@
       case 'qty': return log.produced_amount || 0;
       case 'hours': return log.hour_work || 0;
       case 'period': return log.work_period || '';
-      case 'eff': 
+      case 'eff': {
          const qty = log.produced_amount || 0;
          const hrs = log.hour_work || 0;
          const targetAmt = target.target_amount || 0;
          return (targetAmt > 0 && hrs > 0) ? (qty / (targetAmt * hrs)) * 100 : 0;
-      case 'shortcut': 
+      }
+      case 'shortcut': {
          let shortcutCode = "";
          if (order.id_order && order.id_work) {
            let orderTargets = db.targets.filter(t => String(t.id_work) === String(order.id_work));
@@ -640,6 +653,7 @@
            }
          }
          return shortcutCode;
+      }
       default: return '';
     }
   }
@@ -782,7 +796,8 @@
   // ==========================================
   // INLINE EDITING
   // ==========================================
-  function makeInputEditable(tdElement, queryStr, fieldName, oldVal, arrayIndex) {
+  // ประกาศ Global เพื่อให้ฝังใน HTML Attributes (ondblclick) ได้โดยตรง
+  window.makeInputEditable = function(tdElement, queryStr, fieldName, oldVal, arrayIndex) {
     if (tdElement.querySelector('input')) return; 
     const input = document.createElement('input');
     input.type = 'number';
@@ -825,7 +840,7 @@
     }
   }
 
-  function makeSelectEditable(tdElement, queryStr, fieldName, oldVal, arrayIndex) {
+  window.makeSelectEditable = function(tdElement, queryStr, fieldName, oldVal, arrayIndex) {
     if (tdElement.querySelector('select')) return; 
     const select = document.createElement('select');
     select.className = 'edit-input';
@@ -876,7 +891,7 @@
   // ==========================================
   // EXPORT TO EXCEL
   // ==========================================
-  function exportToExcel() {
+  window.exportToExcel = function() {
     let table = document.getElementById("dataTable").cloneNode(true);
     const icons = table.querySelectorAll('i');
     icons.forEach(icon => icon.parentNode.removeChild(icon));
@@ -888,4 +903,118 @@
     let html = table.outerHTML;
     let blob = new Blob(['\ufeff' + html], { type: 'application/vnd.ms-excel' });
     let url = URL.createObjectURL(blob);
-    let a = document.
+    let a = document.createElement('a');
+    a.href = url;
+    a.download = `Edit_Report_${new Date().toISOString().slice(0,10)}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+
+  // ==========================================
+  // FLOATING MANUAL LOGIC
+  // ==========================================
+  window.openManual = function() {
+    const manual = document.getElementById('floatingManual');
+    manual.style.display = 'flex';
+    
+    // ตั้งค่าให้อยู่ตรงกลางจอเสมอเมื่อเปิดใหม่
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
+    const manualW = 400; // ความกว้างตั้งต้น
+    const manualH = 500; // ความสูงตั้งต้น
+    
+    manual.style.width = manualW + 'px';
+    manual.style.height = manualH + 'px';
+    manual.style.left = (winW / 2 - manualW / 2) + 'px';
+    manual.style.top = (winH / 2 - manualH / 2) + 'px';
+  }
+
+  window.closeManual = function() {
+    document.getElementById('floatingManual').style.display = 'none';
+  }
+
+  // Drag function
+  function dragElement(elmnt) {
+    var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    var header = document.getElementById("manualHeader");
+    
+    if (header) {
+      header.onmousedown = dragMouseDown;
+      header.ontouchstart = dragMouseDown;
+    } else {
+      elmnt.onmousedown = dragMouseDown;
+      elmnt.ontouchstart = dragMouseDown;
+    }
+
+    function dragMouseDown(e) {
+      e = e || window.event;
+      if (e.type !== "touchstart") e.preventDefault();
+      
+      let clientX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
+      let clientY = e.type === "touchstart" ? e.touches[0].clientY : e.clientY;
+      
+      pos3 = clientX;
+      pos4 = clientY;
+      
+      document.onmouseup = closeDragElement;
+      document.onmousemove = elementDrag;
+      document.ontouchend = closeDragElement;
+      document.ontouchmove = elementDrag;
+    }
+
+    function elementDrag(e) {
+      e = e || window.event;
+      if (e.type !== "touchmove") e.preventDefault(); 
+      
+      let clientX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
+      let clientY = e.type === "touchmove" ? e.touches[0].clientY : e.clientY;
+      
+      pos1 = pos3 - clientX;
+      pos2 = pos4 - clientY;
+      pos3 = clientX;
+      pos4 = clientY;
+      
+      elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+      elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+    }
+
+    function closeDragElement() {
+      document.onmouseup = null;
+      document.onmousemove = null;
+      document.ontouchend = null;
+      document.ontouchmove = null;
+    }
+  }
+
+  // พิมพ์คู่มือ
+  window.printManual = function() {
+    const content = document.getElementById('manualContent').innerHTML;
+    const printWin = window.open('', '_blank', 'width=800,height=600');
+    printWin.document.write(`
+      <html>
+      <head>
+        <title>คู่มือการใช้งาน Edit Terminal</title>
+        <style>
+          body { font-family: 'Sarabun', sans-serif; padding: 30px; line-height: 1.6; color: #000; }
+          h4 { font-size: 20px; text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
+          h5 { font-size: 16px; margin-top: 20px; border-bottom: 1px dashed #ccc; padding-bottom: 5px; }
+          ul { padding-left: 20px; }
+          li { margin-bottom: 8px; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        ${content}
+      </body>
+      </html>
+    `);
+    printWin.document.close();
+    printWin.focus();
+    setTimeout(() => {
+      printWin.print();
+      printWin.close();
+    }, 250);
+  }
+</script>
+</body>
+</html>
